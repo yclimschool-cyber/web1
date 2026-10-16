@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="마인크래프트 아이템 이름 번역 릴레이 퀴즈. 왜곡된 이름을 맞히고 기록을 쌓아 보세요.">
+    <title>마인크래프트 미스터리 릴레이 번역기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
+        }
+        .glow-active { animation: pulseGlow 2s infinite; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-bg {
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center">
+
+    <div class="w-full max-w-3xl bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-slate-700/60 shadow-2xl p-6 md:p-10 flex flex-col items-center text-center">
+        
+        <!-- Header -->
+        <div class="w-full flex flex-col items-center mb-8 pb-6 border-b border-slate-800">
+            <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-3xl flex items-center justify-center text-3xl shadow-xl shadow-emerald-900/40 border border-emerald-400 mb-4 transform hover:scale-105 transition-transform">
+                ⛏️
+            </div>
+            <h1 class="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+                마인크래프트 미스터리 릴레이 번역기
+            </h1>
+            <p class="text-xs md:text-sm text-slate-400 mt-2 max-w-lg">
+                초고속 병렬 캐시 엔진이 50개국 이상 언어를 거쳐 왜곡시킨 마인크래프트 아이템/블록 이름을 맞추어 보세요!
+            </p>
+        </div>
+
+        <div class="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
+                <span class="text-[11px] text-slate-400 font-bold">🔥 연속 정답 (Streak)</span>
+                <span id="streakDisplay" class="text-xl font-black text-amber-400 font-mono">0회</span>
+            </div>
+            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
+                <span class="text-[11px] text-slate-400 font-bold">🎯 현재 시도 횟수</span>
+                <span id="attemptsDisplay" class="text-xl font-black text-cyan-400 font-mono">0회</span>
+            </div>
+            <div class="col-span-2 sm:col-span-1 bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
+                <span class="text-[11px] text-slate-400 font-bold">⚙️ 릴레이 난이도</span>
+                <span id="stepDisplay" class="text-base font-bold text-emerald-400 font-mono">20 단계</span>
+            </div>
+            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex flex-col items-center">
+                <span class="text-[11px] text-slate-400 font-bold">🏆 누적 정답</span>
+                <span id="totalSolvedDisplay" class="text-xl font-black text-emerald-300 font-mono">0회</span>
+            </div>
+        </div>
+
+        <!-- Controls: Step count slider (10 to 50) -->
+        <div class="w-full bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80 mb-6 flex flex-col items-center space-y-2">
+            <div class="flex justify-between w-full text-xs font-bold text-slate-300">
+                <span>⚙️ 릴레이 단계 설정 (10~50단계)</span>
+                <span id="stepSliderValue" class="text-emerald-400 font-mono">20 단계</span>
+            </div>
+            <input type="range" id="stepSlider" min="10" max="50" value="20" aria-label="릴레이 번역 단계" oninput="updateStepDisplay(this.value)"
+                class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all">
+            <div class="flex justify-between w-full text-[10px] text-slate-500 font-mono">
+                <span>10단계 (가벼운 왜곡)</span>
+                <span>30단계 (강한 왜곡)</span>
+                <span>50단계 (극강의 왜곡)</span>
+            </div>
+        </div>
+
+        <!-- Start Button -->
+        <div class="w-full space-y-6">
+            
+            <button onclick="startRandomRelay()" id="startBtn"
+                class="w-full py-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-extrabold text-lg md:text-xl rounded-2xl shadow-xl shadow-emerald-950/80 hover:shadow-emerald-900/60 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3">
+                <span class="text-2xl">🎲</span>
+                <span id="startBtnText">새 미스터리 퀴즈 시작하기!</span>
+            </button>
+
+            <!-- Progress Bar Area -->
+            <div id="progressSection" role="status" aria-live="polite" class="hidden space-y-3 p-6 bg-slate-950/90 rounded-2xl border border-slate-800 text-left">
+                <div class="flex justify-between items-center text-xs md:text-sm">
+                    <span id="progressStatusText" class="font-bold text-emerald-400 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        ⚡ 초고속 병렬 캐시 연산 엔진 가동 중...
+                    </span>
+                    <span id="progressPercent" class="font-mono font-extrabold text-slate-300">0%</span>
+                </div>
+
+                <!-- Custom Progress Bar -->
+                <div class="w-full bg-slate-900 rounded-full h-4 border border-slate-800 overflow-hidden relative p-0.5">
+                    <div id="progressBar" class="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-full rounded-full transition-all duration-150 w-0 relative overflow-hidden">
+                        <div class="absolute inset-0 shimmer-bg"></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-[11px] text-slate-500 font-mono pt-1">
+                    <span id="currentLangBadge">제로 레이턴시 멀티홉 파이프라인</span>
+                    <span id="stepCounterText">0 / 20 단계</span>
+                </div>
+            </div>
+
+            <!-- Quiz Card Section -->
+            <div id="quizCard" class="hidden p-6 bg-gradient-to-br from-slate-950 to-slate-900 rounded-2xl border-2 border-emerald-500/50 shadow-2xl text-left space-y-5 glow-active">
+                
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span class="text-xs text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        ❓ 왜곡되어 돌아온 마인크래프트 아이템 이름
+                    </span>
+                    <span id="finalTotalSteps" class="text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2.5 py-0.5 rounded-md">20단계 번역됨</span>
+                </div>
+
+                <!-- Distorted Result -->
+                <div>
+                    <div id="distortedTextDisplay" class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-white py-1 leading-snug">
+                        ???
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">이 미스터리한 이름은 원래 어떤 <strong>마인크래프트 한국어 이름</strong>이었을까요?</p>
+                </div>
+
+                <!-- Answer Input Area -->
+                <div id="answerSection" class="space-y-3 pt-2">
+                    <form onsubmit="submitAnswer(event)" class="flex gap-2">
+                        <input type="text" id="userAnswerInput" aria-label="정답 입력" placeholder="정답 입력 (예: 다이아몬드 곡괭이)" autocomplete="off"
+                            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
+                        <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 whitespace-nowrap">
+                            <span>제출</span>
+                            <span>🎯</span>
+                        </button>
+                    </form>
+
+                    <!-- Message Banner -->
+                    <div id="feedbackMsg" class="hidden p-3 rounded-xl text-xs font-bold transition-all text-center"></div>
+
+                    <!-- Hint System (Cumulative Displays) -->
+                    <div class="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <button onclick="revealHint()" id="hintBtn" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-amber-500/30 transition-all flex items-center gap-1.5">
+                                <span>💡 힌트 보기</span>
+                                <span id="hintCountBadge" class="text-[10px] bg-amber-950 border border-amber-700/50 px-1.5 py-0.5 rounded text-amber-200">0/3</span>
+                            </button>
+                            
+                            <!-- Show Answer Button (Appears when 3 hints unlocked) -->
+                            <button onclick="giveUpAndShowAnswer()" id="revealAnswerBtn" class="hidden py-2 px-3 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5">
+                                <span>🔓 정답 보기 (포기)</span>
+                            </button>
+
+                            <span class="text-[11px] text-slate-500 font-mono">막힐 때 힌트를 확인하세요!</span>
+                        </div>
+                        
+                        <!-- Hint Container Box (Stores all accumulated hints) -->
+                        <div id="hintBox" class="hidden p-3.5 bg-slate-900/90 rounded-xl border border-amber-500/20 text-xs space-y-2">
+                            <div id="hintListContainer" class="space-y-1.5 text-amber-200 text-left font-medium"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solved Success / Result Card -->
+                <div id="successBox" class="hidden p-5 bg-emerald-950/60 border border-emerald-500/50 rounded-xl space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span id="revealedIcon" class="text-4xl bg-slate-900 p-2 rounded-xl border border-emerald-500/30">💎</span>
+                        <div>
+                            <span id="resultTitleHeader" class="text-xs text-emerald-400 font-bold block">🎉 정답입니다!</span>
+                            <h3 id="revealedName" class="text-xl font-extrabold text-white">다이아몬드</h3>
+                            <code id="revealedId" class="text-[11px] font-mono text-emerald-300/80">minecraft:diamond</code>
+                        </div>
+                    </div>
+                    <p id="successStatsText" class="text-xs text-slate-300 font-mono pt-1">총 1회 시도 만에 맞추셨습니다!</p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Recent Games History / Leaderboard -->
+        <div class="w-full mt-8 pt-6 border-t border-slate-800/80 text-left">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span>📋 최근 기록 (원본 이름 ➔ 번역 결과 / 시도 수)</span>
+                <span id="historyCount" class="text-[10px] text-slate-500 font-mono">0개 기록됨</span>
+            </h2>
+            <div id="historyList" class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                <div class="text-xs text-slate-600 text-center py-4 bg-slate-950/40 rounded-xl border border-slate-800/50">
+                    아직 진행된 게임 기록이 없습니다. 새로운 퀴즈에 도전해 보세요!
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-[11px] text-slate-500">
+            Minecraft Data Inspired • Ultra-Fast Parallel Cache Relay Engine • 50+ Global Languages
+        </div>
+
+    </div>
+
+    <script>
+        // Minecraft Item Database (100+ items)
+        const mcItems = [
+            { id: "minecraft:stone", name: "돌", icon: "🧱" },
+            { id: "minecraft:granite", name: "화강암", icon: "🪨" },
+            { id: "minecraft:diorite", name: "섬록암", icon: "🗿" },
+            { id: "minecraft:andesite", name: "안산암", icon: "🧱" },
+            { id: "minecraft:dirt", name: "흙", icon: "🟫" },
+            { id: "minecraft:coarse_dirt", name: "거친 흙", icon: "🟫" },
+            { id: "minecraft:podzol", name: "포졸란", icon: "🟫" },
+            { id: "minecraft:sand", name: "모래", icon: "⏳" },
+            { id: "minecraft:red_sand", name: "붉은 모래", icon: "⏳" },
+            { id: "minecraft:gravel", name: "자갈", icon: "🔘" },
+            { id: "minecraft:gold_ore", name: "금 광석", icon: "🪙" },
+            { id: "minecraft:iron_ore", name: "철 광석", icon: "⛏️" },
+            { id: "minecraft:coal_ore", name: "석탄 광석", icon: "⚫" },
+            { id: "minecraft:oak_log", name: "참나무 원목", icon: "🪵" },
+            { id: "minecraft:spruce_log", name: "가문비나무 원목", icon: "🪵" },
+            { id: "minecraft:birch_log", name: "자작나무 원목", icon: "🪵" },
+            { id: "minecraft:jungle_log", name: "정글나무 원목", icon: "🪵" },
+            { id: "minecraft:acacia_log", name: "아카시아 원목", icon: "🪵" },
+            { id: "minecraft:dark_oak_log", name: "진한 참나무 원목", icon: "🪵" },
+            { id: "minecraft:mangrove_log", name: "맹그로브 원목", icon: "🪵" },
+            { id: "minecraft:cherry_log", name: "체리나무 원목", icon: "🌸" },
+            { id: "minecraft:sponge", name: "스펀지", icon: "🧽" },
+            { id: "minecraft:glass", name: "유리", icon: "🪟" },
+            { id: "minecraft:bookshelf", name: "책장", icon: "📚" },
+            { id: "minecraft:obsidian", name: "흑요석", icon: "⬛" },
+            { id: "minecraft:torch", name: "횃불", icon: "🕯️" },
+            { id: "minecraft:chest", name: "상자", icon: "📦" },
+            { id: "minecraft:crafting_table", name: "제작대", icon: "🧰" },
+            { id: "minecraft:furnace", name: "화로", icon: "🔥" },
+            { id: "minecraft:ladder", name: "사다리", icon: "🪜" },
+            { id: "minecraft:snow_block", name: "눈 블록", icon: "❄️" },
+            { id: "minecraft:ice", name: "얼음", icon: "🧊" },
+            { id: "minecraft:cactus", name: "선인장", icon: "🌵" },
+            { id: "minecraft:clay", name: "점토", icon: "🧱" },
+            { id: "minecraft:jukebox", name: "주크박스", icon: "📻" },
+            { id: "minecraft:pumpkin", name: "호박", icon: "🎃" },
+            { id: "minecraft:netherrack", name: "네더랙", icon: "🟥" },
+            { id: "minecraft:soul_sand", name: "영혼 모래", icon: "👻" },
+            { id: "minecraft:glowstone", name: "발광석", icon: "💡" },
+            { id: "minecraft:jack_o_lantern", name: "잭오랜턴", icon: "🎃" },
+            { id: "minecraft:melon", name: "수박", icon: "🍉" },
+            { id: "minecraft:mycelium", name: "균사", icon: "🍄" },
+            { id: "minecraft:nether_bricks", name: "네더 벽돌", icon: "🧱" },
+            { id: "minecraft:enchanting_table", name: "마법부여대", icon: "📖" },
+            { id: "minecraft:ender_chest", name: "엔더 상자", icon: "🧰" },
+            { id: "minecraft:emerald_ore", name: "에메랄드 광석", icon: "🟩" },
+            { id: "minecraft:beacon", name: "신호기", icon: "🌟" },
+            { id: "minecraft:anvil", name: "모루", icon: "⚒️" },
+            { id: "minecraft:slime_block", name: "슬라임 블록", icon: "🟢" },
+            { id: "minecraft:hay_bale", name: "건초 더미", icon: "🌾" },
+            { id: "minecraft:packed_ice", name: "단단한 얼음", icon: "🧊" },
+            { id: "minecraft:sea_lantern", name: "바다 랜턴", icon: "🔆" },
+            { id: "minecraft:magma_block", name: "마그마 블록", icon: "🌋" },
+            { id: "minecraft:bone_block", name: "뼈 블록", icon: "🦴" },
+            { id: "minecraft:blue_ice", name: "푸른 얼음", icon: "🧊" },
+            { id: "minecraft:scaffolding", name: "비계", icon: "🏗️" },
+            { id: "minecraft:honey_block", name: "꿀 블록", icon: "🍯" },
+            { id: "minecraft:honeycomb_block", name: "벌집 블록", icon: "🍯" },
+            { id: "minecraft:crying_obsidian", name: "우는 옵시디언", icon: "💧" },
+            { id: "minecraft:respawn_anchor", name: "리스폰 정박기", icon: "⚓" },
+            { id: "minecraft:shroomlight", name: "버섯불", icon: "🍄" },
+            { id: "minecraft:lodestone", name: "자석석", icon: "🧲" },
+            { id: "minecraft:apple", name: "사과", icon: "🍎" },
+            { id: "minecraft:coal", name: "석탄", icon: "⬛" },
+            { id: "minecraft:charcoal", name: "목탄", icon: "⬛" },
+            { id: "minecraft:diamond", name: "다이아몬드", icon: "💎" },
+            { id: "minecraft:iron_ingot", name: "철 주괴", icon: "🔩" },
+            { id: "minecraft:gold_ingot", name: "금 주괴", icon: "🪙" },
+            { id: "minecraft:netherite_ingot", name: "네더라이트 주괴", icon: "🛡️" },
+            { id: "minecraft:stick", name: "막대기", icon: "🥢" },
+            { id: "minecraft:bowl", name: "그릇", icon: "🥣" },
+            { id: "minecraft:mushroom_stew", name: "버섯 스튜", icon: "🍲" },
+            { id: "minecraft:string", name: "실", icon: "🧵" },
+            { id: "minecraft:feather", name: "깃털", icon: "🪶" },
+            { id: "minecraft:gunpowder", name: "화약", icon: "💥" },
+            { id: "minecraft:wheat_seeds", name: "밀 씨앗", icon: "🌱" },
+            { id: "minecraft:wheat", name: "밀", icon: "🌾" },
+            { id: "minecraft:bread", name: "빵", icon: "🍞" },
+            { id: "minecraft:wooden_shovel", name: "나무 삽", icon: "🪵" },
+            { id: "minecraft:wooden_pickaxe", name: "나무 곡괭이", icon: "⛏️" },
+            { id: "minecraft:wooden_axe", name: "나무 도끼", icon: "🪓" },
+            { id: "minecraft:stone_sword", name: "돌 검", icon: "⚔️" },
+            { id: "minecraft:stone_shovel", name: "돌 삽", icon: "⛏️" },
+            { id: "minecraft:stone_pickaxe", name: "돌 곡괭이", icon: "⛏️" },
+            { id: "minecraft:stone_axe", name: "돌 도끼", icon: "🪓" },
+            { id: "minecraft:iron_sword", name: "철 검", icon: "⚔️" },
+            { id: "minecraft:iron_pickaxe", name: "철 곡괭이", icon: "⛏️" },
+            { id: "minecraft:diamond_sword", name: "다이아몬드 검", icon: "🗡️" },
+            { id: "minecraft:diamond_pickaxe", name: "다이아몬드 곡괭이", icon: "⛏️" },
+            { id: "minecraft:painting", name: "그림", icon: "🖼️" },
+            { id: "minecraft:golden_apple", name: "황금 사과", icon: "🍎" },
+            { id: "minecraft:bucket", name: "양동이", icon: "🪣" },
+            { id: "minecraft:water_bucket", name: "물 양동이", icon: "💧" },
+            { id: "minecraft:lava_bucket", name: "용암 양동이", icon: "🔥" },
+            { id: "minecraft:minecart", name: "광산 수레", icon: "🚃" },
+            { id: "minecraft:saddle", name: "안장", icon: "🏇" },
+            { id: "minecraft:redstone", name: "레드스톤", icon: "❤️" },
+            { id: "minecraft:snowball", name: "눈덩이", icon: "⚾" },
+            { id: "minecraft:leather", name: "가죽", icon: "👜" },
+            { id: "minecraft:milk_bucket", name: "우유 양동이", icon: "🥛" },
+            { id: "minecraft:paper", name: "종이", icon: "📄" },
+            { id: "minecraft:book", name: "책", icon: "📖" },
+            { id: "minecraft:slime_ball", name: "슬라임볼", icon: "🟢" },
+            { id: "minecraft:egg", name: "달걀", icon: "🥚" },
+            { id: "minecraft:compass", name: "나침반", icon: "🧭" },
+            { id: "minecraft:fishing_rod", name: "낚싯대", icon: "🎣" },
+            { id: "minecraft:clock", name: "시계", icon: "⏰" },
+            { id: "minecraft:bone", name: "뼈다귀", icon: "🦴" },
+            { id: "minecraft:sugar", name: "설탕", icon: "🍬" },
+            { id: "minecraft:cookie", name: "쿠키", icon: "🍪" },
+            { id: "minecraft:map", name: "지도", icon: "🗺️" },
+            { id: "minecraft:shears", name: "가위", icon: "✂️" },
+            { id: "minecraft:beef", name: "익히지 않은 소고기", icon: "🥩" },
+            { id: "minecraft:cooked_beef", name: "스테이크", icon: "🥩" },
+            { id: "minecraft:chicken", name: "익히지 않은 닭고기", icon: "🍗" },
+            { id: "minecraft:cooked_chicken", name: "구운 닭고기", icon: "🍗" },
+            { id: "minecraft:rotten_flesh", name: "썩은 살점", icon: "🧟" },
+            { id: "minecraft:ender_pearl", name: "엔더 진주", icon: "🔮" },
+            { id: "minecraft:blaze_rod", name: "블레이즈 막대", icon: "🔥" },
+            { id: "minecraft:ghast_tear", name: "가스트의 눈물", icon: "💧" },
+            { id: "minecraft:emerald", name: "에메랄드", icon: "🟩" },
+            { id: "minecraft:nether_star", name: "네더의 별", icon: "✨" },
+            { id: "minecraft:totem_of_undying", name: "불사의 토템", icon: "🗿" },
+            { id: "minecraft:elytra", name: "날개", icon: "🪽" }
+        ];
+
+        // 50+ Global Languages Pool
+        const globalLanguages = [
+            { code: "en" }, { code: "ja" }, { code: "fr" }, { code: "es" }, { code: "de" },
+            { code: "it" }, { code: "ru" }, { code: "vi" }, { code: "th" }, { code: "ar" },
+            { code: "zh-CN" }, { code: "pt" }, { code: "nl" }, { code: "id" }, { code: "pl" },
+            { code: "tr" }, { code: "uk" }, { code: "el" }, { code: "sv" }, { code: "cs" },
+            { code: "hu" }, { code: "ro" }, { code: "fi" }, { code: "no" }, { code: "da" },
+            { code: "hi" }, { code: "bn" }, { code: "he" }, { code: "fa" }, { code: "ms" },
+            { code: "fil" }, { code: "sw" }, { code: "af" }, { code: "is" }, { code: "hr" },
+            { code: "sk" }, { code: "bg" }, { code: "lt" }, { code: "lv" }, { code: "et" },
+            { code: "sl" }, { code: "sr" }, { code: "sq" }, { code: "mk" }, { code: "ka" },
+            { code: "hy" }, { code: "az" }, { code: "kk" }, { code: "uz" }, { code: "mn" }
+        ];
+
+        // Local translation cache (bounded to avoid unbounded memory growth)
+        const translationCache = new Map();
+        const CACHE_LIMIT = 500;
+        const HISTORY_KEY = 'minecraftMysteryRelayHistory_v2';
+        const STATS_KEY = 'minecraftMysteryRelayStats_v2';
+        let translationFailureCount = 0;
+        let bestStreak = 0;
+        let totalSolved = 0;
+        let totalAttemptsAllTime = 0;
+        let lastItemId = null;
+
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+
+        function normalizeAnswer(value) {
+            return String(value ?? '').normalize('NFKC').toLocaleLowerCase('ko-KR').replace(/[\s\u200B-\u200D\uFEFF]/g, '').replace(/[.,!?·_-]/g, '');
+        }
+
+        function loadSavedData() {
+            try {
+                const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                if (Array.isArray(history)) gameHistory = history.slice(0, 30);
+                const stats = JSON.parse(localStorage.getItem(STATS_KEY) || '{}');
+                bestStreak = Number.isFinite(stats.bestStreak) ? stats.bestStreak : 0;
+                totalSolved = Number.isFinite(stats.totalSolved) ? stats.totalSolved : 0;
+                totalAttemptsAllTime = Number.isFinite(stats.totalAttemptsAllTime) ? stats.totalAttemptsAllTime : 0;
+            } catch (err) {
+                gameHistory = [];
+                bestStreak = totalSolved = totalAttemptsAllTime = 0;
+            }
+            const solvedDisplay = document.getElementById('totalSolvedDisplay');
+            if (solvedDisplay) solvedDisplay.innerText = `${totalSolved}회`;
+            renderHistory();
+        }
+
+        function saveStats() {
+            try { localStorage.setItem(STATS_KEY, JSON.stringify({ bestStreak, totalSolved, totalAttemptsAllTime })); } catch (err) { /* storage may be unavailable */ }
+        }
+
+        let isTranslating = false;
+        let selectedItem = null;
+        let currentDistortedText = "";
+        let currentAttempts = 0;
+        let streakCount = 0;
+        let currentHintLevel = 0;
+        let isSolved = false;
+        let gameHistory = [];
+
+        function updateStepDisplay(val) {
+            document.getElementById('stepDisplay').innerText = `${val} 단계`;
+            document.getElementById('stepSliderValue').innerText = `${val} 단계`;
+        }
+
+        // Translation requests are sequential because each hop depends on the previous result.
+        // A bounded timeout and cache prevent stalled rounds and unbounded memory growth.
+        async function translateText(text, targetLang) {
+            const cacheKey = `${targetLang}::${text}`;
+            if (translationCache.has(cacheKey)) return translationCache.get(cacheKey);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4500);
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+                const res = await fetch(url, { signal: controller.signal });
+                if (!res.ok) throw new Error(`Translation HTTP ${res.status}`);
+                const data = await res.json();
+                const result = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('') : '';
+                if (!result.trim()) throw new Error('Empty translation result');
+                translationCache.set(cacheKey, result);
+                if (translationCache.size > CACHE_LIMIT) translationCache.delete(translationCache.keys().next().value);
+                return result;
+            } catch (err) {
+                translationFailureCount++;
+                return text; // Keep the round playable if the external service fails.
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        // Relay hops must run in order: the next language needs the previous translation.
+        async function runFastParallelRelay(originalName, steps, onProgress) {
+            let text = originalName;
+            const routeCodes = [];
+            for (let i = 0; i < steps - 1; i++) {
+                let lang = globalLanguages[Math.floor(Math.random() * globalLanguages.length)].code;
+                routeCodes.push(lang);
+            }
+            routeCodes.push('ko');
+
+            for (let i = 0; i < routeCodes.length; i++) {
+                text = await translateText(text, routeCodes[i]);
+                onProgress(i + 1, routeCodes.length);
+                // Yield to the browser so progress and input remain responsive.
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            return text;
+        }
+
+        async function startRandomRelay() {
+            if (isTranslating) return;
+            isTranslating = true;
+            translationFailureCount = 0;
+            currentAttempts = 0;
+            currentHintLevel = 0;
+            isSolved = false;
+            document.getElementById('attemptsDisplay').innerText = '0회';
+            document.getElementById('hintCountBadge').innerText = '0/3';
+            document.getElementById('hintBox').classList.add('hidden');
+            document.getElementById('hintListContainer').innerHTML = '';
+            document.getElementById('revealAnswerBtn').classList.add('hidden');
+            document.getElementById('feedbackMsg').classList.add('hidden');
+            document.getElementById('answerSection').classList.remove('hidden');
+            document.getElementById('successBox').classList.add('hidden');
+            document.getElementById('userAnswerInput').value = '';
+
+            const startBtn = document.getElementById('startBtn');
+            const progressSection = document.getElementById('progressSection');
+            const quizCard = document.getElementById('quizCard');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const stepCounterText = document.getElementById('stepCounterText');
+            const progressStatusText = document.getElementById('progressStatusText');
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            quizCard.classList.add('hidden');
+            progressSection.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.innerText = '0%';
+
+            try {
+                let randomIndex = Math.floor(Math.random() * mcItems.length);
+                if (mcItems.length > 1 && mcItems[randomIndex].id === lastItemId) {
+                    randomIndex = (randomIndex + 1 + Math.floor(Math.random() * (mcItems.length - 1))) % mcItems.length;
+                }
+                selectedItem = mcItems[randomIndex];
+                lastItemId = selectedItem.id;
+                const totalSteps = Number.parseInt(document.getElementById('stepSlider').value, 10);
+                progressStatusText.innerText = '🌐 언어별 번역을 순서대로 진행 중...';
+                currentDistortedText = await runFastParallelRelay(selectedItem.name, totalSteps, (step, total) => {
+                    stepCounterText.innerText = `${step} / ${total} 단계`;
+                    const pct = Math.round((step / total) * 100);
+                    progressBar.style.width = `${pct}%`;
+                    progressPercent.innerText = `${pct}%`;
+                    progressStatusText.innerText = translationFailureCount ? `🌐 번역 진행 중 · 실패 ${translationFailureCount}회 (원문 유지)` : '🌐 언어별 번역을 순서대로 진행 중...';
+                });
+                document.getElementById('finalTotalSteps').innerText = `${totalSteps}단계 번역됨`;
+                document.getElementById('distortedTextDisplay').innerText = currentDistortedText || selectedItem.name;
+                if (translationFailureCount > 0) {
+                    progressStatusText.innerText = `완료 · 일부 번역 실패 ${translationFailureCount}회 (해당 단계는 원문 유지)`;
+                } else {
+                    progressStatusText.innerText = '번역 완료! 정답을 맞혀 보세요.';
+                }
+                progressSection.classList.add('hidden');
+                quizCard.classList.remove('hidden');
+                document.getElementById('startBtnText').innerText = '다른 문제로 재도전하기!';
+                document.getElementById('userAnswerInput').focus();
+            } catch (err) {
+                progressStatusText.innerText = '번역 중 문제가 발생했습니다. 다시 시도해 주세요.';
+                progressSection.classList.add('hidden');
+                quizCard.classList.remove('hidden');
+                document.getElementById('distortedTextDisplay').innerText = selectedItem?.name || '문제를 불러오지 못했습니다.';
+                document.getElementById('feedbackMsg').className = 'p-3 rounded-xl text-xs font-bold text-center bg-amber-950/80 text-amber-200 border border-amber-800';
+                document.getElementById('feedbackMsg').innerText = '번역 서비스에 문제가 있어 원본 이름으로 문제를 준비했습니다.';
+                document.getElementById('feedbackMsg').classList.remove('hidden');
+            } finally {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                isTranslating = false;
+            }
+        }
+
+        function submitAnswer(e) {
+            e.preventDefault();
+            if (isSolved || !selectedItem) return;
+
+            const input = document.getElementById('userAnswerInput').value.trim();
+            if (!input) return;
+
+            currentAttempts++;
+            document.getElementById('attemptsDisplay').innerText = `${currentAttempts}회`;
+
+            const cleanTarget = normalizeAnswer(selectedItem.name);
+            const cleanInput = normalizeAnswer(input);
+
+            const feedbackMsg = document.getElementById('feedbackMsg');
+            feedbackMsg.classList.remove('hidden', 'bg-red-950/80', 'text-red-300', 'border-red-800');
+
+            if (cleanInput === cleanTarget) {
+                // Correct Answer!
+                handleRoundComplete(true);
+            } else {
+                // Wrong Answer
+                feedbackMsg.className = "p-3 rounded-xl text-xs font-bold transition-all text-center bg-red-950/80 text-red-300 border border-red-800";
+                feedbackMsg.innerText = `❌ 오답입니다! 다시 생각해보세요. (시도 횟수: ${currentAttempts}회)`;
+                document.getElementById('userAnswerInput').value = '';
+                document.getElementById('userAnswerInput').focus();
+            }
+        }
+
+        // Cumulative Hint System (Preserves all previous hints)
+        function revealHint() {
+            if (!selectedItem || isSolved) return;
+
+            if (currentHintLevel < 3) {
+                currentHintLevel++;
+            }
+
+            document.getElementById('hintCountBadge').innerText = `${currentHintLevel}/3`;
+            const hintBox = document.getElementById('hintBox');
+            const hintListContainer = document.getElementById('hintListContainer');
+            hintBox.classList.remove('hidden');
+
+            const cleanName = selectedItem.name.replace(/\s+/g, '');
+            const charCount = cleanName.length;
+
+            // Rebuild hints cumulatively
+            let hintsHTML = '';
+            
+            if (currentHintLevel >= 1) {
+                hintsHTML += `<div class="p-2 bg-slate-950/60 rounded-lg border border-amber-500/20">
+                    💡 <strong>힌트 1:</strong> 원본 글자 수는 총 <strong>${charCount}글자</strong>입니다.
+                </div>`;
+            }
+            if (currentHintLevel >= 2) {
+                hintsHTML += `<div class="p-2 bg-slate-950/60 rounded-lg border border-amber-500/20">
+                    💡 <strong>힌트 2:</strong> 아이템 아이콘은 <strong>${escapeHTML(selectedItem.icon)}</strong> 입니다.
+                </div>`;
+            }
+            if (currentHintLevel >= 3) {
+                hintsHTML += `<div class="p-2 bg-slate-950/60 rounded-lg border border-amber-500/20">
+                    💡 <strong>힌트 3:</strong> 마인크래프트 ID는 <code>${escapeHTML(selectedItem.id)}</code> 입니다.
+                </div>`;
+                
+                // Show Give Up / Answer Button when Hint 3 reached
+                document.getElementById('revealAnswerBtn').classList.remove('hidden');
+            }
+
+            hintListContainer.innerHTML = hintsHTML;
+        }
+
+        function giveUpAndShowAnswer() {
+            if (isSolved || !selectedItem) return;
+            handleRoundComplete(false);
+        }
+
+        // Handles Success or Give-up Completion
+        function handleRoundComplete(isSuccess) {
+            isSolved = true;
+
+            const feedbackMsg = document.getElementById('feedbackMsg');
+            feedbackMsg.classList.remove('hidden');
+
+            if (isSuccess) {
+                streakCount++;
+                bestStreak = Math.max(bestStreak, streakCount);
+                totalSolved++;
+                totalAttemptsAllTime += currentAttempts;
+                const solvedDisplay = document.getElementById('totalSolvedDisplay');
+                if (solvedDisplay) solvedDisplay.innerText = `${totalSolved}회`;
+                saveStats();
+                document.getElementById('streakDisplay').innerText = `${streakCount}회`;
+                feedbackMsg.className = "p-3 rounded-xl text-xs font-bold transition-all text-center bg-emerald-950/80 text-emerald-300 border border-emerald-800";
+                feedbackMsg.innerText = `🎉 정답입니다! (${currentAttempts}회 시도 성공)`;
+                
+                document.getElementById('resultTitleHeader').innerText = "🎉 정답입니다!";
+                document.getElementById('resultTitleHeader').className = "text-xs text-emerald-400 font-bold block";
+                document.getElementById('successStatsText').innerText = `총 ${currentAttempts}회 시도 만에 정답을 맞추셨습니다! (현재 연속 정답: ${streakCount}회)`;
+            } else {
+                totalAttemptsAllTime += currentAttempts;
+                saveStats();
+                streakCount = 0;
+                document.getElementById('streakDisplay').innerText = `0회`;
+                feedbackMsg.className = "p-3 rounded-xl text-xs font-bold transition-all text-center bg-rose-950/80 text-rose-300 border border-rose-800";
+                feedbackMsg.innerText = `🔓 정답을 확인하셨습니다. (연속 정답 리셋)`;
+
+                document.getElementById('resultTitleHeader').innerText = "🔓 정답 공개";
+                document.getElementById('resultTitleHeader').className = "text-xs text-rose-400 font-bold block";
+                document.getElementById('successStatsText').innerText = `정답을 확인했습니다. (시도 횟수: ${currentAttempts}회 / 사용 힌트: ${currentHintLevel}개)`;
+            }
+
+            document.getElementById('answerSection').classList.add('hidden');
+            document.getElementById('successBox').classList.remove('hidden');
+
+            document.getElementById('revealedIcon').innerText = selectedItem.icon;
+            document.getElementById('revealedName').innerText = selectedItem.name;
+            document.getElementById('revealedId').innerText = selectedItem.id;
+
+            // Add to Leaderboard / History Log (Format: 원본 이름 ➔ 번역 결과 / 시도 수)
+            addHistoryRecord(selectedItem.name, currentDistortedText, currentAttempts, isSuccess);
+        }
+
+        function addHistoryRecord(originalName, distortedText, attempts, isSuccess) {
+            gameHistory.unshift({
+                original: originalName,
+                distorted: distortedText,
+                attempts,
+                hints: currentHintLevel,
+                success: isSuccess,
+                date: new Date().toISOString()
+            });
+            gameHistory = gameHistory.slice(0, 30);
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(gameHistory)); } catch (err) { /* storage may be unavailable */ }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('historyList');
+            const historyCount = document.getElementById('historyCount');
+            if (!historyList || !historyCount) return;
+            historyCount.innerText = `${gameHistory.length}개 기록됨`;
+            if (!gameHistory.length) {
+                historyList.innerHTML = '<div class="text-xs text-slate-600 text-center py-4 bg-slate-950/40 rounded-xl border border-slate-800/50">아직 진행된 게임 기록이 없습니다. 새로운 퀴즈에 도전해 보세요!</div>';
+                return;
+            }
+            historyList.innerHTML = gameHistory.map(item => `
+                <div class="p-3 bg-slate-950/80 rounded-xl border ${item.success ? 'border-emerald-900/60' : 'border-rose-900/60'} flex items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2 min-w-0 pr-2">
+                        <span class="${item.success ? 'text-emerald-400' : 'text-rose-400'} font-bold shrink-0">${item.success ? '✅' : '🔓'} ${escapeHTML(item.original)}</span>
+                        <span class="text-slate-600 shrink-0">➔</span>
+                        <span class="text-slate-300 font-medium truncate">"${escapeHTML(item.distorted)}"</span>
+                    </div>
+                    <div class="text-[11px] font-mono text-slate-400 whitespace-nowrap bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                        시도: <strong class="text-cyan-300">${Number(item.attempts) || 0}회</strong> / 힌트: <strong class="text-amber-300">${Number(item.hints) || 0}개</strong>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Restore the latest records when the page is opened again.
+        document.addEventListener('DOMContentLoaded', loadSavedData);
+    </script>
+</body>
+</html>
